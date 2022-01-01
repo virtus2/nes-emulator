@@ -2,7 +2,8 @@
 #include <stdint.h>
 #include <vector>
 #include <string>
-
+#include <map>
+//Forward Declaration
 class Bus;
 class nes6502
 {
@@ -19,29 +20,58 @@ class nes6502
     uint16_t pc = 0x0000; // Program Counter
     uint8_t status = 0x00; // Status Register
 
+    // External event functions
+    void reset(); // Reset Interrupt
+    void irq();   // Interrupt Request
+    void nmi();   // Non-Maskable Interrupt Request
+    void clock(); // 1 clock cycle update
+
+    // 현재 명령어가 완료되었으면 true를 반환함
+    // 매 cycle마다 clock을 시뮬레이트하는 대신 step-by-step 실행을 할 수 있게 해줌
+    bool complete();
+
     void ConnectBus(Bus* n) { bus = n; }
+
+    // Produces a map of strings, with keys equivalent to instruction start locations
+    // in memory, for the specified address range
+    // 특정 주소 범위의 바이너리 코드를 읽기 편한 string으로 바꿔줌
+    std::map<uint16_t, std::string> disassemble(uint16_t nStart, uint16_t nStop);
     enum FLAGS6502
     {
-        C = (1 << 0),
-        Z = (1 << 1),
-        I = (1 << 2),
-        D = (1 << 3),
-        B = (1 << 4),
-        U = (1 << 5),
-        V = (1 << 6),
-        N = (1 << 7),
+        C = (1 << 0),	// Carry Bit
+        Z = (1 << 1),	// Zero
+        I = (1 << 2),	// Disable Interrupts
+        D = (1 << 3),	// Decimal Mode (unused in this implementation)
+        B = (1 << 4),	// Break
+        U = (1 << 5),	// Unused
+        V = (1 << 6),	// Overflow
+        N = (1 << 7),	// Negative
     };
 
     private:
     uint8_t GetFlag(FLAGS6502 f);
     void SetFlag(FLAGS6502 f, bool v);
 
+    // 에뮬레이션을 위한 변수
+    uint8_t  fetched = 0x00;    // ALU에 입력된 input value
+    uint16_t temp = 0x0000;     // 임시로 사용할 값
+    uint16_t addr_abs = 0x0000; // 사용한 메모리의 끝주소
+    uint16_t addr_rel = 0x00;   // branch이후의 절대 주소
+    uint8_t  opcode = 0x00;     // Is the instruction byte
+    uint8_t  cycles = 0;	    // Counts how many cycles the instruction has remaining
+    uint32_t clock_count = 0;   // A global accumulation of the number of clocks
+
+    // Linkage to the communications bus
     Bus* bus = nullptr;
     uint8_t read(uint16_t a);
     void write(uint16_t a, uint8_t d);
 
+    // 데이터는 메모리 주소 또는 instruction의 일부(즉시 사용할 수 있는 메모리 주소)에서 가져올 수 있음
+    // instruction의 addressing mode에 따라 결정함
+    uint8_t fetch();
+
     // opcode translation table를 컴파일하고 저장하는 데 사용할 구조체와 벡터
-    // 숫자 순서대로 표에 저장되므로 디코딩 없이 조회할 수 있음
+    // 숫자순으로 테이블에 저장되므로 디코딩 없이 명령어를 조회할 수 있음
     struct INSTRUCTION
     {
         std::string name; // 명령어의 이름(disassembly에 사용)
@@ -104,5 +134,9 @@ class nes6502
     uint8_t TSX();	uint8_t TXA();	uint8_t TXS();	uint8_t TYA();
     // I capture all "unofficial" opcodes with this function. It is
     // functionally identical to a NOP
-    uint8_t XXX();
+    uint8_t XXX(); 
+#ifdef LOGMODE
+    private:
+    FILE* logfile = nullptr;
+#endif
 };
