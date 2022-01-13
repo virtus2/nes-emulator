@@ -63,8 +63,8 @@ class nes6502
 
     // Linkage to the communications bus
     Bus* bus = nullptr;
-    uint8_t read(uint16_t a);
-    void write(uint16_t a, uint8_t d);
+    uint8_t cpuRead(uint16_t a);
+    void cpuWrite(uint16_t a, uint8_t d);
 
     // 데이터는 메모리 주소 또는 instruction의 일부(즉시 사용할 수 있는 메모리 주소)에서 가져올 수 있음
     // instruction의 addressing mode에 따라 결정함

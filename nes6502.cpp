@@ -36,17 +36,17 @@ nes6502::~nes6502()
 ///////////////////////////////////////////////////////////////////////////////
 // BUS CONNECTIVITY
 // 버스의 16비트 주소에서 데이터 8비트를 읽음
-uint8_t nes6502::read(uint16_t a)
+uint8_t nes6502::cpuRead(uint16_t a)
 {
 	// 정상 작동 시 "read only"는 false로 설정됨. 이상할 수 있지만
     // 버스상의 일부 장치들은 버스로부터 데이터를 읽을 때 상태를 변경할 수 있으며, 이는 정상적인 상황에서 의도된 것
     // 하지만 disassembler는 버스의 장치 상태를 변경하지 않고 주소의 데이터를 읽어야함
-    return bus->read(a, false);
+    return bus->cpuRead(a, false);
 }
 // 버스의 특정 주소에 byte를 씀
-void nes6502::write(uint16_t a, uint8_t d)
+void nes6502::cpuWrite(uint16_t a, uint8_t d)
 {
-    bus->write(a, d);
+    bus->cpuWrite(a, d);
 }
 ///////////////////////////////////////////////////////////////////////////////
 // EXTERNAL INPUTS
@@ -60,8 +60,8 @@ void nes6502::reset()
 {
 	// Program Counter를 설정할 주소를 가져옴
 	addr_abs = 0xFFFC; // 
-	uint16_t lo = read(addr_abs + 0);
-	uint16_t hi = read(addr_abs + 1);
+	uint16_t lo = cpuRead(addr_abs + 0);
+	uint16_t hi = cpuRead(addr_abs + 1);
 	// Set it
 	pc = (hi << 8) | lo;
 
@@ -96,22 +96,22 @@ void nes6502::irq()
 	{
 		// Program Counter를 스택에 push
 		// 16bit이므로 두 번 push해야함
-		write(0x0100 + stkp, (pc >> 8) & 0x00FF);
+		cpuWrite(0x0100 + stkp, (pc >> 8) & 0x00FF);
 		stkp--;
-		write(0x0100 + stkp, pc & 0x00FF);
+		cpuWrite(0x0100 + stkp, pc & 0x00FF);
 		stkp--;
 
 		// 상태 레지스터를 스택에 push
 		SetFlag(B, 0); // Break
 		SetFlag(U, 1); // Unused
 		SetFlag(I, 1); // Disable Interrupts
-		write(0x0100 + stkp, status);
+		cpuWrite(0x0100 + stkp, status);
 		stkp--;
 
 		// 하드코딩된 주소에서 새로운 Program Counter 주소값을 읽어옴
 		addr_abs = 0xFFFE;
-		uint16_t lo = read(addr_abs + 0);
-		uint16_t hi = read(addr_abs + 1);
+		uint16_t lo = cpuRead(addr_abs + 0);
+		uint16_t hi = cpuRead(addr_abs + 1);
 		pc = (hi << 8) | lo;
 
 		// IRQs take time
@@ -124,20 +124,20 @@ void nes6502::irq()
 // 0xFFFA로부터 새로운 Program Counter 주소를 가져옴
 void nes6502::nmi()
 {
-	write(0x0100 + stkp, (pc >> 8) & 0x00FF);
+	cpuWrite(0x0100 + stkp, (pc >> 8) & 0x00FF);
 	stkp--;
-	write(0x0100 + stkp, pc & 0x00FF);
+	cpuWrite(0x0100 + stkp, pc & 0x00FF);
 	stkp--;
 
 	SetFlag(B, 0);
 	SetFlag(U, 1);
 	SetFlag(I, 1);
-	write(0x0100 + stkp, status);
+	cpuWrite(0x0100 + stkp, status);
 	stkp--;
 
 	addr_abs = 0xFFFA;
-	uint16_t lo = read(addr_abs + 0);
-	uint16_t hi = read(addr_abs + 1);
+	uint16_t lo = cpuRead(addr_abs + 0);
+	uint16_t hi = cpuRead(addr_abs + 1);
 	pc = (hi << 8) | lo;
 
 	cycles = 8;
@@ -146,7 +146,7 @@ void nes6502::clock()
 {
 	if (cycles == 0)
 	{
-		opcode = read(pc);
+		opcode = cpuRead(pc);
 		pc++;
 
 		cycles = lookup[opcode].cycles;
@@ -213,7 +213,7 @@ uint8_t nes6502::IMM()
 // 자주 사용하는 변수를 page zero에 저장하는 경향이 있음
 uint8_t nes6502::ZP0()
 {
-	addr_abs = read(pc);
+	addr_abs = cpuRead(pc);
 	pc++;
 	addr_abs &= 0x00FF;
 	return 0;
@@ -224,7 +224,7 @@ uint8_t nes6502::ZP0()
 // Zero Page 내부를 iterate하는데 유용함
 uint8_t nes6502::ZPX()
 {
-	addr_abs = (read(pc) + x);
+	addr_abs = (cpuRead(pc) + x);
 	pc++;
 	addr_abs &= 0x00FF;
 	return 0;
@@ -234,7 +234,7 @@ uint8_t nes6502::ZPX()
 // ZPX와 같지만 Y Register를 사용함
 uint8_t nes6502::ZPY()
 {
-	addr_abs = (read(pc) + y);
+	addr_abs = (cpuRead(pc) + y);
 	pc++;
 	addr_abs &= 0x00FF;
 	return 0;
@@ -245,7 +245,7 @@ uint8_t nes6502::ZPY()
 // branch instruction에만 사용되며 아무데나 점프할 수 없고 -128에서 +127의 범위로만 가능
 uint8_t nes6502::REL()
 {
-	addr_rel = read(pc);
+	addr_rel = cpuRead(pc);
 	pc++;
 	// 0~127범위의 점프는 unsigned number지만 
 	// -128~0범위의 점프는 signed number여야함
@@ -260,9 +260,9 @@ uint8_t nes6502::REL()
 // 16비트 주소 전체(ex: 0x1234)를 불러옴
 uint8_t nes6502::ABS()
 {
-	uint16_t lo = read(pc);
+	uint16_t lo = cpuRead(pc);
 	pc++;
-	uint16_t hi = read(pc);
+	uint16_t hi = cpuRead(pc);
 	pc++;
 
 	addr_abs = (hi << 8) | lo;
@@ -275,9 +275,9 @@ uint8_t nes6502::ABS()
 // 결과값이 page, 즉 high byte를 변경할 경우 추가적인 clock cycle이 필요함
 uint8_t nes6502::ABX()
 {
-	uint16_t lo = read(pc);
+	uint16_t lo = cpuRead(pc);
 	pc++;
-	uint16_t hi = read(pc);
+	uint16_t hi = cpuRead(pc);
 	pc++;
 
 	addr_abs = (hi << 8) | lo;
@@ -295,9 +295,9 @@ uint8_t nes6502::ABX()
 // 결과값이 page, 즉 high byte를 변경할 경우 추가적인 clock cycle이 필요함
 uint8_t nes6502::ABY()
 {
-	uint16_t lo = read(pc);
+	uint16_t lo = cpuRead(pc);
 	pc++;
-	uint16_t hi = read(pc);
+	uint16_t hi = cpuRead(pc);
 	pc++;
 
 	addr_abs = (hi << 8) | lo;
@@ -319,20 +319,20 @@ uint8_t nes6502::ABY()
 // 출처: https://nesdev.com/6502bugs.txt
 uint8_t nes6502::IND()
 {
-	uint16_t ptr_lo = read(pc);
+	uint16_t ptr_lo = cpuRead(pc);
 	pc++;
-	uint16_t ptr_hi = read(pc);
+	uint16_t ptr_hi = cpuRead(pc);
 	pc++;
 	
 	uint16_t ptr = (ptr_hi << 8) | ptr_lo;
 
 	if (ptr_lo == 0x00FF) // page boundary 하드웨어 버그를 시뮬레이션함
 	{
-		addr_abs = (read(ptr & 0xFF00) << 8) | read(ptr + 0);
+		addr_abs = (cpuRead(ptr & 0xFF00) << 8) | cpuRead(ptr + 0);
 	}
 	else // 정상 작동했을 경우
 	{
-		addr_abs = (read(ptr + 1) << 8) | read(ptr + 0);
+		addr_abs = (cpuRead(ptr + 1) << 8) | cpuRead(ptr + 0);
 	}
 
 	return 0;
@@ -347,11 +347,11 @@ uint8_t nes6502::IND()
 // 주소 $2074의 값을 Register A에 불러옴
 uint8_t nes6502::IZX()
 {
-	uint16_t t = read(pc);
+	uint16_t t = cpuRead(pc);
 	pc++;
 
-	uint16_t lo = read((uint16_t)(t + (uint16_t)x) & 0x00FF);
-	uint16_t hi = read((uint16_t)(t + (uint16_t)x + 1) & 0x00FF);
+	uint16_t lo = cpuRead((uint16_t)(t + (uint16_t)x) & 0x00FF);
+	uint16_t hi = cpuRead((uint16_t)(t + (uint16_t)x + 1) & 0x00FF);
 
 	addr_abs = (hi << 8) | lo;
 
@@ -369,11 +369,11 @@ uint8_t nes6502::IZX()
 // IZY는 Zero Page에서 주소값을 가져온 뒤 Y값을 더함
 uint8_t nes6502::IZY()
 {
-	uint16_t t = read(pc);
+	uint16_t t = cpuRead(pc);
 	pc++;
 
-	uint16_t lo = read(t & 0x00FF);
-	uint16_t hi = read((t + 1) & 0x00FF);
+	uint16_t lo = cpuRead(t & 0x00FF);
+	uint16_t hi = cpuRead((t + 1) & 0x00FF);
 
 	addr_abs = (hi << 8) | lo;
 	addr_abs += y;
@@ -402,7 +402,7 @@ uint8_t nes6502::fetch()
 {
 	// IMP는 fetch할 instrcution이 없으므로 제외
 	if (!(lookup[opcode].addrmode == &nes6502::IMP))
-		fetched = read(addr_abs);
+		fetched = cpuRead(addr_abs);
 	return fetched;
 }
 ///////////////////////////////////////////////////////////////////////////////
@@ -532,7 +532,7 @@ uint8_t nes6502::ASL()
 	if (lookup[opcode].addrmode == &nes6502::IMP)
 		a = temp & 0x00FF;
 	else
-		write(addr_abs, temp & 0x00FF);
+		cpuWrite(addr_abs, temp & 0x00FF);
 	return 0;
 }
 
@@ -656,17 +656,17 @@ uint8_t nes6502::BRK()
 	pc++;
 
 	SetFlag(I, 1);
-	write(0x0100 + stkp, (pc >> 8) & 0x00FF);
+	cpuWrite(0x0100 + stkp, (pc >> 8) & 0x00FF);
 	stkp--;
-	write(0x0100 + stkp, pc & 0x00FF);
+	cpuWrite(0x0100 + stkp, pc & 0x00FF);
 	stkp--;
 
 	SetFlag(B, 1);
-	write(0x0100 + stkp, status);
+	cpuWrite(0x0100 + stkp, status);
 	stkp--;
 	SetFlag(B, 0);
 
-	pc = (uint16_t)read(0xFFFE) | ((uint16_t)read(0xFFFF) << 8);
+	pc = (uint16_t)cpuRead(0xFFFE) | ((uint16_t)cpuRead(0xFFFF) << 8);
 	return 0;
 }
 
@@ -791,7 +791,7 @@ uint8_t nes6502::DEC()
 {
 	fetch();
 	temp = fetched - 1;
-	write(addr_abs, temp & 0x00FF);
+	cpuWrite(addr_abs, temp & 0x00FF);
 	SetFlag(Z, (temp & 0x00FF) == 0x0000);
 	SetFlag(N, temp & 0x0080);
 	return 0;
@@ -842,7 +842,7 @@ uint8_t nes6502::INC()
 {
 	fetch();
 	temp = fetched + 1;
-	write(addr_abs, temp & 0x00FF);
+	cpuWrite(addr_abs, temp & 0x00FF);
 	SetFlag(Z, (temp & 0x00FF) == 0x0000);
 	SetFlag(N, temp & 0x0080);
 	return 0;
@@ -888,9 +888,9 @@ uint8_t nes6502::JSR()
 {
 	pc--;
 
-	write(0x0100 + stkp, (pc >> 8) & 0x00FF);
+	cpuWrite(0x0100 + stkp, (pc >> 8) & 0x00FF);
 	stkp--;
-	write(0x0100 + stkp, pc & 0x00FF);
+	cpuWrite(0x0100 + stkp, pc & 0x00FF);
 	stkp--;
 
 	pc = addr_abs;
@@ -946,7 +946,7 @@ uint8_t nes6502::LSR()
 	if (lookup[opcode].addrmode == &nes6502::IMP)
 		a = temp & 0x00FF;
 	else
-		write(addr_abs, temp & 0x00FF);
+		cpuWrite(addr_abs, temp & 0x00FF);
 	return 0;
 }
 
@@ -989,7 +989,7 @@ uint8_t nes6502::PHA()
 	// stack은 메모리에 존재하기 때문에 Bus에 메모리를 write해야함
 	// 0x0100: 하드코딩된 스택포인터의 base location
 	// stkp:   offest
-	write(0x0100 + stkp, a);
+	cpuWrite(0x0100 + stkp, a);
 	stkp--;
 	return 0;
 }
@@ -999,7 +999,7 @@ uint8_t nes6502::PHA()
 // Note:        Break flag is set to 1 before push
 uint8_t nes6502::PHP()
 {
-	write(0x0100 + stkp, status | B | U);
+	cpuWrite(0x0100 + stkp, status | B | U);
 	SetFlag(B, 0);
 	SetFlag(U, 0);
 	stkp--;
@@ -1012,7 +1012,7 @@ uint8_t nes6502::PHP()
 uint8_t nes6502::PLA()
 {
 	stkp++;
-	a = read(0x0100 + stkp);
+	a = cpuRead(0x0100 + stkp);
 	SetFlag(Z, a == 0x00);
 	SetFlag(N, a & 0x80);
 	return 0;
@@ -1023,7 +1023,7 @@ uint8_t nes6502::PLA()
 uint8_t nes6502::PLP()
 {
 	stkp++;
-	status = read(0x0100 + stkp);
+	status = cpuRead(0x0100 + stkp);
 	SetFlag(U, 1);
 	return 0;
 }
@@ -1038,7 +1038,7 @@ uint8_t nes6502::ROL()
 	if (lookup[opcode].addrmode == &nes6502::IMP)
 		a = temp & 0x00FF;
 	else
-		write(addr_abs, temp & 0x00FF);
+		cpuWrite(addr_abs, temp & 0x00FF);
 	return 0;
 }
 
@@ -1052,30 +1052,30 @@ uint8_t nes6502::ROR()
 	if (lookup[opcode].addrmode == &nes6502::IMP)
 		a = temp & 0x00FF;
 	else
-		write(addr_abs, temp & 0x00FF);
+		cpuWrite(addr_abs, temp & 0x00FF);
 	return 0;
 }
 
 uint8_t nes6502::RTI()
 {
 	stkp++;
-	status = read(0x0100 + stkp);
+	status = cpuRead(0x0100 + stkp);
 	status &= ~B;
 	status &= ~U;
 
 	stkp++;
-	pc = (uint16_t)read(0x0100 + stkp);
+	pc = (uint16_t)cpuRead(0x0100 + stkp);
 	stkp++;
-	pc |= (uint16_t)read(0x0100 + stkp) << 8;
+	pc |= (uint16_t)cpuRead(0x0100 + stkp) << 8;
 	return 0;
 }
 
 uint8_t nes6502::RTS()
 {
 	stkp++;
-	pc = (uint16_t)read(0x0100 + stkp);
+	pc = (uint16_t)cpuRead(0x0100 + stkp);
 	stkp++;
-	pc |= (uint16_t)read(0x0100 + stkp) << 8;
+	pc |= (uint16_t)cpuRead(0x0100 + stkp) << 8;
 
 	pc++;
 	return 0;
@@ -1115,7 +1115,7 @@ uint8_t nes6502::SEI()
 // Function:    M = A
 uint8_t nes6502::STA()
 {
-	write(addr_abs, a);
+	cpuWrite(addr_abs, a);
 	return 0;
 }
 
@@ -1124,7 +1124,7 @@ uint8_t nes6502::STA()
 // Function:    M = X
 uint8_t nes6502::STX()
 {
-	write(addr_abs, x);
+	cpuWrite(addr_abs, x);
 	return 0;
 }
 
@@ -1133,7 +1133,7 @@ uint8_t nes6502::STX()
 // Function:    M = Y
 uint8_t nes6502::STY()
 {
-	write(addr_abs, y);
+	cpuWrite(addr_abs, y);
 	return 0;
 }
 
@@ -1258,7 +1258,7 @@ std::map<uint16_t, std::string> nes6502::disassemble(uint16_t nStart, uint16_t n
 		std::string sInst = "$" + hex(addr, 4) + ": ";
 
 		// Read instruction, and get its readable name
-		uint8_t opcode = bus->read(addr, true); addr++;
+		uint8_t opcode = bus->cpuRead(addr, true); addr++;
 		sInst += lookup[opcode].name + " ";
 
 		// Get oprands from desired locations, and form the
@@ -1272,66 +1272,66 @@ std::map<uint16_t, std::string> nes6502::disassemble(uint16_t nStart, uint16_t n
 		}
 		else if (lookup[opcode].addrmode == &nes6502::IMM)
 		{
-			value = bus->read(addr, true); addr++;
+			value = bus->cpuRead(addr, true); addr++;
 			sInst += "#$" + hex(value, 2) + " {IMM}";
 		}
 		else if (lookup[opcode].addrmode == &nes6502::ZP0)
 		{
-			lo = bus->read(addr, true); addr++;
+			lo = bus->cpuRead(addr, true); addr++;
 			hi = 0x00;
 			sInst += "$" + hex(lo, 2) + " {ZP0}";
 		}
 		else if (lookup[opcode].addrmode == &nes6502::ZPX)
 		{
-			lo = bus->read(addr, true); addr++;
+			lo = bus->cpuRead(addr, true); addr++;
 			hi = 0x00;
 			sInst += "$" + hex(lo, 2) + ", X {ZPX}";
 		}
 		else if (lookup[opcode].addrmode == &nes6502::ZPY)
 		{
-			lo = bus->read(addr, true); addr++;
+			lo = bus->cpuRead(addr, true); addr++;
 			hi = 0x00;
 			sInst += "$" + hex(lo, 2) + ", Y {ZPY}";
 		}
 		else if (lookup[opcode].addrmode == &nes6502::IZX)
 		{
-			lo = bus->read(addr, true); addr++;
+			lo = bus->cpuRead(addr, true); addr++;
 			hi = 0x00;
 			sInst += "($" + hex(lo, 2) + ", X) {IZX}";
 		}
 		else if (lookup[opcode].addrmode == &nes6502::IZY)
 		{
-			lo = bus->read(addr, true); addr++;
+			lo = bus->cpuRead(addr, true); addr++;
 			hi = 0x00;
 			sInst += "($" + hex(lo, 2) + "), Y {IZY}";
 		}
 		else if (lookup[opcode].addrmode == &nes6502::ABS)
 		{
-			lo = bus->read(addr, true); addr++;
-			hi = bus->read(addr, true); addr++;
+			lo = bus->cpuRead(addr, true); addr++;
+			hi = bus->cpuRead(addr, true); addr++;
 			sInst += "$" + hex((uint16_t)(hi << 8) | lo, 4) + " {ABS}";
 		}
 		else if (lookup[opcode].addrmode == &nes6502::ABX)
 		{
-			lo = bus->read(addr, true); addr++;
-			hi = bus->read(addr, true); addr++;
+			lo = bus->cpuRead(addr, true); addr++;
+			hi = bus->cpuRead(addr, true); addr++;
 			sInst += "$" + hex((uint16_t)(hi << 8) | lo, 4) + ", X {ABX}";
 		}
 		else if (lookup[opcode].addrmode == &nes6502::ABY)
 		{
-			lo = bus->read(addr, true); addr++;
-			hi = bus->read(addr, true); addr++;
+			lo = bus->cpuRead(addr, true); addr++;
+			hi = bus->cpuRead(addr, true); addr++;
 			sInst += "$" + hex((uint16_t)(hi << 8) | lo, 4) + ", Y {ABY}";
 		}
 		else if (lookup[opcode].addrmode == &nes6502::IND)
 		{
-			lo = bus->read(addr, true); addr++;
-			hi = bus->read(addr, true); addr++;
+			lo = bus->cpuRead(addr, true); addr++;
+			hi = bus->cpuRead(addr, true); addr++;
 			sInst += "($" + hex((uint16_t)(hi << 8) | lo, 4) + ") {IND}";
 		}
 		else if (lookup[opcode].addrmode == &nes6502::REL)
 		{
-			value = bus->read(addr, true); addr++;
+			value = bus->cpuRead(addr, true); addr++;
 			sInst += "$" + hex(value, 2) + " [$" + hex(addr + value, 4) + "] {REL}";
 		}
 
