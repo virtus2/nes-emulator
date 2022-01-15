@@ -81,4 +81,11 @@ void Bus::reset()
 
 void Bus::clock()
 {
+	ppu.clock();
+	// cpu clock은 ppu clock 보다 3배 느림
+	if (nSystemClockCounter % 3 == 0)
+	{
+		cpu.clock();
+	}
+	nSystemClockCounter++;
 }
