@@ -3,5 +3,5 @@
 픽셀 단위 출력을 위한 SDL 기반 간단한 엔진도 포함되어 있습니다.  
   
 <h3>참고</h3>  
-데이터시트 - http://archive.6502.org/datasheets/rockwell_r65c00_microprocessors.pdf  
+데이터시트 - http://archive.6502.org/datasheets/rockwell_r65c00_microprocessors.pdf    
 Nesdev Wiki - https://wiki.nesdev.org/w/index.php?title=Nesdev_Wiki  
