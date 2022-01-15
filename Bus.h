@@ -4,7 +4,6 @@
 
 #include "nes6502.h"
 #include "nes2C02.h"
-
 #include "Cartridge.h"
 class Bus
 {
