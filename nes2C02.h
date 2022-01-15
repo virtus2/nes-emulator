@@ -1,8 +1,11 @@
 ﻿#pragma once
 #include <cstdint>
 #include <memory>
+
 #include "Engine.h"
+
 #include "Cartridge.h"
+
 class nes2C02
 {
 	public:
@@ -29,5 +32,22 @@ class nes2C02
 	public:
 	void ConnectCartridge(const std::shared_ptr<Cartridge>& cartridge);
 	void clock();
+
+	private:
+	SDL_Color  palScreen[0x40]; // Palette Screen
+	vts::Sprite sprScreen = vts::Sprite(256,240);
+	vts::Sprite sprNameTable[2] = { vts::Sprite(256, 240), vts::Sprite(256, 240) };
+	vts::Sprite sprPatternTable[2] = { vts::Sprite(128, 128), vts::Sprite(128, 128) };
+
+	public:
+	// Debug Utilities
+	vts::Sprite& GetScreen();
+	vts::Sprite& GetNameTable(uint8_t i);
+	vts::Sprite& GetPatternTable(uint8_t i);
+	bool frame_complete = false;
+
+	private:
+	int16_t scanline = 0; // row of the sreen
+	int16_t cycle = 0; // column of the screen
 };
 
