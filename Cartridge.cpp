@@ -15,6 +15,8 @@ Cartridge::Cartridge(const std::string& sFileName)
         uint8_t tv_system2;
         char unused[5];
     }header;
+
+    bImageValid = false;
     // 바이너리 모드로 파일을 열음
     std::ifstream ifs;
     ifs.open(sFileName, std::ifstream::binary);
@@ -50,6 +52,13 @@ Cartridge::Cartridge(const std::string& sFileName)
         {
 
         }
+        // Mapper ID에 따라 해당하는 Mapper를 불러옴
+        switch (nMapperID)
+        {
+        case 0: pMapper = std::make_shared<Mapper_000>(nPRGBanks, nCHRBanks); break;
+        }
+
+        bImageValid = true;
         ifs.close();
     }
 }
@@ -58,19 +67,55 @@ Cartridge::~Cartridge()
 {
 }
 
-bool Cartridge::cpuRead(uint16_t addr, bool rdonly)
+bool Cartridge::ImageValid()
 {
+    return bImageValid;
+}
+
+bool Cartridge::cpuRead(uint16_t addr, uint8_t & data)
+{
+    uint32_t mapped_addr = 0;
+    if (pMapper->cpuMapRead(addr, mapped_addr))
+    {
+        data = vPRGMemory[mapped_addr];
+        return true;
+    }
+    else
+        return false;
 }
 
 bool Cartridge::cpuWrite(uint16_t addr, uint8_t data)
 {
+    uint32_t mapped_addr = 0;
+    if (pMapper->cpuMapRead(addr, mapped_addr))
+    {
+        vPRGMemory[mapped_addr] = data;
+        return true;
+    }
+    else
+        return false;
 }
 
-bool Cartridge::ppuRead(uint16_t addr, bool rdonly)
+bool Cartridge::ppuRead(uint16_t addr, uint8_t & data)
 {
+    uint32_t mapped_addr = 0;
+    if (pMapper->ppuMapRead(addr, mapped_addr))
+    {
+        data = vCHRMemory[mapped_addr];
+        return true;
+    }
+    else
+        return false;
 }
 
 bool Cartridge::ppuWrite(uint16_t addr, uint8_t data)
 {
-
+    uint32_t mapped_addr = 0;
+    if (pMapper->ppuMapRead(addr, mapped_addr))
+    {
+        vCHRMemory[mapped_addr] = data;
+        return true;
+    }
+    else
+        return false;
 }
