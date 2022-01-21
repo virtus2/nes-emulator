@@ -97,7 +97,7 @@ class Demo : public vts::Engine
 	bool OnUserCreate()
 	{
 		// Load the cartridge
-		cart = std::make_shared<Cartridge>("ROM/donkey.nes");
+		cart = std::make_shared<Cartridge>("ROMs/donkey.nes");
 		if (!cart->ImageValid())
 		{
 			printf("Cartridge Not Valid!\n");
@@ -119,6 +119,21 @@ class Demo : public vts::Engine
 	{
 		Clear(vts::DARK_BLUE);
 
+		// Handle input for controller in port #1
+		nes.controller[0] = 0x00;
+		nes.controller[0] |= GetKey(SDL_SCANCODE_X).bHeld ? 0x80 : 0x00; // A Button
+		nes.controller[0] |= GetKey(SDL_SCANCODE_Z).bHeld ? 0x40 : 0x00; // B Button
+		nes.controller[0] |= GetKey(SDL_SCANCODE_A).bHeld ? 0x20 : 0x00; // Select
+		nes.controller[0] |= GetKey(SDL_SCANCODE_S).bHeld ? 0x10 : 0x00; // Start
+		nes.controller[0] |= GetKey(SDL_SCANCODE_UP).bHeld ? 0x08 : 0x00;
+		nes.controller[0] |= GetKey(SDL_SCANCODE_DOWN).bHeld ? 0x04 : 0x00;
+		nes.controller[0] |= GetKey(SDL_SCANCODE_LEFT).bHeld ? 0x02 : 0x00;
+		nes.controller[0] |= GetKey(SDL_SCANCODE_RIGHT).bHeld ? 0x01 : 0x00;
+
+		if (GetKey(SDL_SCANCODE_SPACE).bPressed) bEmulationRun = !bEmulationRun;
+		if (GetKey(SDL_SCANCODE_R).bPressed) nes.reset();
+		if (GetKey(SDL_SCANCODE_P).bPressed) (++nSelectedPalette) &= 0x07;
+
 		if (bEmulationRun)
 		{
 			if (fResidualTime > 0.0f)
@@ -133,7 +148,7 @@ class Demo : public vts::Engine
 		else
 		{
 			// Emulate code step-by-step
-			if (GetKey(SDLK_c).bPressed)
+			if (GetKey(SDL_SCANCODE_C).bPressed)
 			{
 				// Clock enough times to execute a whole CPU instruction
 				do { nes.clock(); } while (!nes.cpu.complete());
@@ -144,7 +159,7 @@ class Demo : public vts::Engine
 			}
 
 			// Emulate one whole frame
-			if (GetKey(SDLK_f).bPressed)
+			if (GetKey(SDL_SCANCODE_F).bPressed)
 			{
 				// Clock enough times to draw a single frame
 				do { nes.clock(); } while (!nes.ppu.frame_complete);
@@ -155,14 +170,19 @@ class Demo : public vts::Engine
 			}
 		}
 
-
-		if (GetKey(SDLK_SPACE).bPressed) bEmulationRun = !bEmulationRun;
-		if (GetKey(SDLK_r).bPressed) nes.reset();
-
-		if (GetKey(SDLK_p).bPressed) (++nSelectedPalette) &= 0x07;
-
 		DrawCpu(516, 2);
 		DrawCode(516, 72, 26);
+		/*
+		// Draw OAM Contents (first 26 out of 64) ======================================
+		for (int i = 0; i < 26; i++)
+		{
+			std::string s = hex(i, 2) + ": (" + std::to_string(nes.ppu.pOAM[i * 4 + 3])
+				+ ", " + std::to_string(nes.ppu.pOAM[i * 4 + 0]) + ") "
+				+ "ID: " + hex(nes.ppu.pOAM[i * 4 + 1], 2) +
+				+" AT: " + hex(nes.ppu.pOAM[i * 4 + 2], 2);
+			DrawString(516, 72 + i * 10, s);
+		}
+		*/
 
 		// Draw Palettes & Pattern Tables
 		const int nSwatchSize = 6;

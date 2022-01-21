@@ -82,7 +82,7 @@ namespace vts
         // Utility
 
         public: // Hardware Interfaces
-        HWButton GetKey(SDL_KeyCode key) const;
+        HWButton GetKey(SDL_Scancode key) const;
 
         private:
         SDL_Window* window = NULL;
@@ -269,10 +269,10 @@ namespace vts{
             isRunning = false;
             break;
         case SDL_KEYDOWN:
-            pKeyNewState[event.key.keysym.sym] = true;
+            pKeyNewState[event.key.keysym.scancode] = true;
             break;
         case SDL_KEYUP:
-            pKeyNewState[event.key.keysym.sym] = false;
+            pKeyNewState[event.key.keysym.scancode] = false;
             break;
         }
     }
@@ -372,7 +372,7 @@ namespace vts{
         SDL_RenderClear(renderer);
     }
 
-    HWButton Engine::GetKey(SDL_KeyCode k) const
+    HWButton Engine::GetKey(SDL_Scancode k) const
     {
         return pKeyboardState[k];
     }
