@@ -4,6 +4,7 @@
 
 #include "nes6502.h"
 #include "nes2C02.h"
+#include "nes2A03.h"
 #include "Cartridge.h"
 class Bus
 {
@@ -16,12 +17,24 @@ class Bus
 	nes6502 cpu;
 	// The 2C02 Picture Processing Unit
 	nes2C02 ppu;
+	// The 2A03 Audio Processing Unit
+	nes2A03 apu;
 	// The Cartridge or "GamePak"
 	std::shared_ptr<Cartridge> cart;
 	// 2KB of RAM
 	uint8_t cpuRam[2048];
 	// Controllers
 	uint8_t controller[2];
+
+	public:
+	void SetSampleFrequency(uint32_t sample_rate);
+	double dAudioSample = 0.0;
+
+	private:
+	double dAudioTime = 0.0; // Elapsed audio time in between system samples
+	double dAudioGlobalTime = 0.0;
+	double dAudioTimePerNESClock = 0.0; // Real-time duration that elapses during a real-time nes clock
+	double dAudioTimePerSystemSample = 0.0f; // Real-time duration between samples required by the sound hardware
 
 
 	public: // Bus Read & Write
@@ -31,7 +44,7 @@ class Bus
 	public: // System Interface
 	void insertCartridge(const std::shared_ptr<Cartridge>& cartridge);
 	void reset(); // reset button of the front of the nes
-	void clock(); // one system tick of emulation
+	bool clock(); // one system tick of emulation, return true if the particular clock cycle yielded a new audio sample in real-time
 
 	private:
 	// 경과한 system clock 수

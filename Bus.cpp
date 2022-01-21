@@ -14,6 +14,13 @@ Bus::~Bus()
 {
 }
 
+void Bus::SetSampleFrequency(uint32_t sample_rate)
+{
+	dAudioTimePerSystemSample = 1.0 / (double)sample_rate;
+	// Magic Number - Core crystal frequency used by the NTSC NES
+	dAudioTimePerNESClock = 1.0 / 5369318.0; // PPU Clock Frequency
+}
+
 void Bus::cpuWrite(uint16_t addr, uint8_t data)
 {
 	if (cart->cpuWrite(addr, data))
@@ -42,6 +49,10 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data)
 		// PPU I/O registers at $2000-$2007 are mirrored at $2008-$200F, $2010-$2017, $2018-$201F, and so forth, all the way up to $3FF8-$3FFF.
 		// https://wiki.nesdev.org/w/index.php?title=Mirroring
 		ppu.cpuWrite(addr & 0x0007, data);
+	}
+	else if ((addr >= 0x4000 && addr <= 0x4013) || addr == 0x4015 || addr == 0x4017)
+	{
+		apu.cpuWrite(addr, data);
 	}
 	else if (addr == 0x4014)
 	{
@@ -95,9 +106,11 @@ void Bus::reset()
 	nSystemClockCounter = 0;
 }
 
-void Bus::clock()
+bool Bus::clock()
 {
 	ppu.clock();
+
+	apu.clock();
 	// cpu clock은 ppu clock 보다 3배 느림
 	if (nSystemClockCounter % 3 == 0)
 	{
@@ -151,6 +164,16 @@ void Bus::clock()
 		}
 	}
 
+	// Synchronizing with Audio
+	bool bAudioSampleReady = false;
+	dAudioTime += dAudioTimePerNESClock;
+	if (dAudioTime >= dAudioTimePerSystemSample)
+	{
+		// Audio sample ready to be delivered to the audio system
+		dAudioTime -= dAudioTimePerSystemSample;
+		dAudioSample = apu.GetOutputSample();
+		bAudioSampleReady = true;
+	}
 	// PPU로부터 NMI가 발생하면 플래그를 초기화시키고 CPU에게 NMI를 발생시킨다.
 	if (ppu.nmi)
 	{
@@ -161,4 +184,6 @@ void Bus::clock()
 
 
 	nSystemClockCounter++;
+
+	return bAudioSampleReady;
 }
