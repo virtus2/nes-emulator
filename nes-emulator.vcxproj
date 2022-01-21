@@ -151,6 +151,7 @@
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mapper.cpp" />
     <ClCompile Include="Mapper_000.cpp" />
+    <ClCompile Include="nes2A03.cpp" />
     <ClCompile Include="nes2C02.cpp" />
     <ClCompile Include="nes6502.cpp" />
   </ItemGroup>
@@ -160,6 +161,7 @@
     <ClInclude Include="Engine.h" />
     <ClInclude Include="Mapper.h" />
     <ClInclude Include="Mapper_000.h" />
+    <ClInclude Include="nes2A03.h" />
     <ClInclude Include="nes2C02.h" />
     <ClInclude Include="nes6502.h" />
   </ItemGroup>
