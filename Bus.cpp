@@ -87,5 +87,12 @@ void Bus::clock()
 	{
 		cpu.clock();
 	}
+
+	// PPU로부터 NMI가 발생하면 플래그를 초기화시키고 CPU에게 NMI를 발생시킨다.
+	if (ppu.nmi)
+	{
+		ppu.nmi = false;
+		cpu.nmi();
+	}
 	nSystemClockCounter++;
 }
