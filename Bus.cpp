@@ -43,6 +43,17 @@ void Bus::cpuWrite(uint16_t addr, uint8_t data)
 		// https://wiki.nesdev.org/w/index.php?title=Mirroring
 		ppu.cpuWrite(addr & 0x0007, data);
 	}
+	else if (addr == 0x4014)
+	{
+		dma_page = data;
+		dma_addr = 0x00;
+		dma_transfer = true;
+	}
+	else if (addr >= 0x4016 && addr <= 0x4017)
+	{
+		// "Lock In" controller state at this time
+		controller_state[addr & 0x0001] = controller[addr & 0x0001];
+	}
 }
 
 uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly)
@@ -63,7 +74,12 @@ uint8_t Bus::cpuRead(uint16_t addr, bool bReadOnly)
 		// PPU Address Range, mirrored every 8
 		data = ppu.cpuRead(addr & 0x0007, bReadOnly);
 	}
-
+	else if (addr >= 0x4016 && addr <= 0x4017)
+	{
+		// Read out the MSB of the controller status word
+		data = (controller_state[addr & 0x0001] & 0x80) > 0;
+		controller_state[addr & 0x0001] <<= 1;
+	}
 	return data;
 }
 
@@ -85,7 +101,54 @@ void Bus::clock()
 	// cpu clock은 ppu clock 보다 3배 느림
 	if (nSystemClockCounter % 3 == 0)
 	{
-		cpu.clock();
+		// Is the system performing a DMA transfer form CPU memory to 
+		// OAM memory on PPU?...
+		if (dma_transfer)
+		{
+			// ...Yes! We need to wait until the next even CPU clock cycle
+			// before it starts...
+			if (dma_dummy)
+			{
+				// ...So hang around in here each clock until 1 or 2 cycles
+				// have elapsed...
+				if (nSystemClockCounter % 2 == 1)
+				{
+					// ...and finally allow DMA to start
+					dma_dummy = false;
+				}
+			}
+			else
+			{
+				// DMA can take place!
+				if (nSystemClockCounter % 2 == 0)
+				{
+					// On even clock cycles, read from CPU bus
+					dma_data = cpuRead(dma_page << 8 | dma_addr);
+				}
+				else
+				{
+					// On odd clock cycles, write to PPU OAM
+					ppu.pOAM[dma_addr] = dma_data;
+					// Increment the lo byte of the address
+					dma_addr++;
+					// If this wraps around, we know that 256
+					// bytes have been written, so end the DMA
+					// transfer, and proceed as normal
+					if (dma_addr == 0x00)
+					{
+						dma_transfer = false;
+						dma_dummy = true;
+					}
+				}
+			}
+		}
+		else
+		{
+			// No DMA happening, the CPU is in control of its
+			// own destiny. Go forth my friend and calculate
+			// awesomeness for many generations to come...
+			cpu.clock();
+		}
 	}
 
 	// PPU로부터 NMI가 발생하면 플래그를 초기화시키고 CPU에게 NMI를 발생시킨다.
@@ -94,5 +157,8 @@ void Bus::clock()
 		ppu.nmi = false;
 		cpu.nmi();
 	}
+
+
+
 	nSystemClockCounter++;
 }
