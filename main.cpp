@@ -1,5 +1,6 @@
 ﻿#include <iostream>
 #include <sstream>
+#include <deque>
 
 #include "Bus.h"
 #include "nes6502.h"
@@ -10,12 +11,18 @@
 class Demo : public vts::Engine
 {
 	public:
+	Demo() { sAppName = "nes emulator"; }
+
+	private:
     Bus nes;
 	std::shared_ptr<Cartridge> cart;
 	bool bEmulationRun = false;
 	float fResidualTime = 0.0f;
 
 	uint8_t nSelectedPalette = 0x00;
+
+	std::list<uint16_t> audio[4];
+	float fAccumulatedTime = 0.0f;
 
 	private:
     std::map<uint16_t, std::string> mapAsm;
@@ -94,6 +101,28 @@ class Demo : public vts::Engine
 		}
 	}
 
+	// This function is called by the underlying sound hardware
+	// which runs in a different thread. It is automatically
+	// synchronised with the sample rate of the sound card, and
+	// expects a single "sample" to be returned, whcih ultimately
+	// makes its way to your speakers, and then your ears, for that
+	// lovely 8-bit bliss... but, that means we've some thread
+	// handling to deal with, since we want both the PGE thread
+	// and the sound system thread to interact with the emulator.
+
+	static Demo* pInstance; // Static variable that will hold a pointer to "this"
+	static float SoundOut(int nChannel, float fGlobalTime, float fTimeStep)
+	{
+		if (nChannel == 0)
+		{
+			// repeatedly clocking until there is a sample ready in real-time
+			while (!(pInstance->nes.clock())) {}; 
+			return static_cast<float>(pInstance->nes.dAudioSample);
+		}
+		else
+			return 0.0f;
+	}
+
 	bool OnUserCreate()
 	{
 		// Load the cartridge
@@ -110,12 +139,95 @@ class Demo : public vts::Engine
 		// Extract dissassembly
 		mapAsm = nes.cpu.disassemble(0x0000, 0xFFFF);
 
+		for (int i = 0; i < 4; i++)
+		{
+			for (int j = 0; j < 120; j++)
+			{
+				audio[i].push_back(0);
+			}
+		}
+
 		// Reset NES
 		nes.reset();
+
+		pInstance = this;
+		nes.SetSampleFrequency(44100);
+		vts::Sound::InitializeAudio(44100, 1, 8, 512);
+		vts::Sound::SetUserSynthFunction(SoundOut);
 		return true;
 	}
 
 	bool OnUserUpdate(float fElapsedTime)
+	{
+		EmulatorUpdateWithAudio(fElapsedTime);
+		return true;
+	}
+
+	bool EmulatorUpdateWithAudio(float fElapsedTime)
+	{
+		// Sample audio channel output roughly once per frame
+		fAccumulatedTime += fElapsedTime;
+		if (fAccumulatedTime >= 1.0f / 60.0f)
+		{
+			fAccumulatedTime -= (1.0f / 60.0f);
+			audio[0].pop_front();
+			audio[0].push_back(nes.apu.pulse1_visual);
+			audio[1].pop_front();
+			audio[1].push_back(nes.apu.pulse2_visual);
+			audio[2].pop_front();
+			audio[2].push_back(nes.apu.noise_visual);
+		}
+
+		Clear(vts::DARK_BLUE);
+
+		// Handle input for controller in port #1
+		nes.controller[0] = 0x00;
+		nes.controller[0] |= GetKey(SDL_SCANCODE_X).bHeld ? 0x80 : 0x00; // A Button
+		nes.controller[0] |= GetKey(SDL_SCANCODE_Z).bHeld ? 0x40 : 0x00; // B Button
+		nes.controller[0] |= GetKey(SDL_SCANCODE_A).bHeld ? 0x20 : 0x00; // Select
+		nes.controller[0] |= GetKey(SDL_SCANCODE_S).bHeld ? 0x10 : 0x00; // Start
+		nes.controller[0] |= GetKey(SDL_SCANCODE_UP).bHeld ? 0x08 : 0x00;
+		nes.controller[0] |= GetKey(SDL_SCANCODE_DOWN).bHeld ? 0x04 : 0x00;
+		nes.controller[0] |= GetKey(SDL_SCANCODE_LEFT).bHeld ? 0x02 : 0x00;
+		nes.controller[0] |= GetKey(SDL_SCANCODE_RIGHT).bHeld ? 0x01 : 0x00;
+
+		if (GetKey(SDL_SCANCODE_R).bPressed) nes.reset();
+		if (GetKey(SDL_SCANCODE_P).bPressed) (++nSelectedPalette) &= 0x07;
+
+		DrawCpu(516, 2);
+		DrawCode(516, 72, 26);
+		/*
+		// Draw OAM Contents (first 26 out of 64) ======================================
+		for (int i = 0; i < 26; i++)
+		{
+			std::string s = hex(i, 2) + ": (" + std::to_string(nes.ppu.pOAM[i * 4 + 3])
+				+ ", " + std::to_string(nes.ppu.pOAM[i * 4 + 0]) + ") "
+				+ "ID: " + hex(nes.ppu.pOAM[i * 4 + 1], 2) +
+				+" AT: " + hex(nes.ppu.pOAM[i * 4 + 2], 2);
+			DrawString(516, 72 + i * 10, s);
+		}
+		*/
+
+		// Draw Palettes & Pattern Tables
+		const int nSwatchSize = 6;
+		for (int p = 0; p < 8; p++) // For each palette
+			for (int s = 0; s < 4; s++) // For each index
+				FillRect(516 + p * (nSwatchSize * 5) + s * nSwatchSize, 343,
+					nSwatchSize, nSwatchSize, nes.ppu.GetColorFromPaletteRam(p, s));
+
+		// Draw selection reticule around selected palette
+		DrawRect(516 + nSelectedPalette * (nSwatchSize * 5) - 1, 342, (nSwatchSize * 4), nSwatchSize, vts::WHITE);
+
+		// Generate Pattern Tables
+		DrawSprite(516, 350, &nes.ppu.GetPatternTable(0, nSelectedPalette));
+		DrawSprite(648, 350, &nes.ppu.GetPatternTable(1, nSelectedPalette));
+
+		// Draw rendered output
+		DrawSprite(0, 0, &nes.ppu.GetScreen(), 2);
+		return true;
+	}
+
+	bool EmulatorUpdateWithoutAudio(float fElapsedTime)
 	{
 		Clear(vts::DARK_BLUE);
 
@@ -203,6 +315,10 @@ class Demo : public vts::Engine
 		return true;
 	}
 };
+
+
+// Provide implementation for our static pointer
+Demo* Demo::pInstance = nullptr;
 
 int main(int argc, char* args[])
 {
