@@ -72,17 +72,14 @@ namespace vts
 
         public:
         // Drawing
-        void DrawString(int32_t x, int32_t y, const std::string& sText, SDL_Color color = WHITE);
+        void DrawString(int32_t x, int32_t y, const std::string& sText, SDL_Color color = WHITE, uint32_t scale=1);
         void DrawSprite(int32_t x, int32_t y, Sprite* sprite, uint32_t scale = 1);
+        void FillRect(int32_t x, int32_t y, int32_t w, int32_t h, SDL_Color p);
+        void DrawRect(int32_t x, int32_t y, int32_t w, int32_t h, SDL_Color p = WHITE);
         void Clear(SDL_Color color);
 
         public:
         // Utility
-        // 
-        // Returns the width of the currently selected drawing target in "pixels"
-        int32_t GetDrawTargetWidth() const;
-        // Returns the height of the currently selected drawing target in "pixels"
-        int32_t GetDrawTargetHeight() const;
 
         public: // Hardware Interfaces
         HWButton GetKey(SDL_KeyCode key) const;
@@ -168,15 +165,12 @@ namespace vts{
         if (x >= 0 && x < width && y >= 0 && y < height)
         {
             Uint32* pixels = (Uint32*)surface->pixels;
-            
-            //Uint8* pixel = (Uint8*)surface->pixels + (y * surface->pitch) + (x * surface->format->BytesPerPixel);
             // SDL stores it's pixel color in a Uint32
             // R 0000 0000
             // G 0000 0000
             // B 0000 0000
             // A 0000 0000
             Uint32 color = SDL_MapRGBA(surface->format, p.r, p.g, p.b, p.a);
-            // *((Uint32 *)pixel) = color;
             pixels[y * width + x] = color;
             return true;
         }
@@ -237,8 +231,6 @@ namespace vts{
     {
         isRunning = true;
         EngineThread();
-        //std::thread t = std::thread(&Engine::EngineThread, this);
-        //t.join();
     }
 
     bool Engine::OnUserCreate()
@@ -336,15 +328,11 @@ namespace vts{
         }
     }
 
-    void Engine::DrawString(int32_t x, int32_t y, const std::string& sText, SDL_Color color)
+    void Engine::DrawString(int32_t x, int32_t y, const std::string& sText, SDL_Color color, uint32_t scale)
     {
         SDL_Surface* surface = TTF_RenderText_Solid(font, sText.c_str(), color);
         SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-        SDL_Rect dst;
-        dst.x = x;
-        dst.y = y;
-        dst.w = surface->w;
-        dst.h = surface->h;
+        SDL_Rect dst{ x, y, surface->w * scale, surface->h *scale};
         SDL_RenderCopy(renderer, texture, NULL, &dst);
         SDL_FreeSurface(surface);
         SDL_DestroyTexture(texture);
@@ -355,14 +343,26 @@ namespace vts{
         if (sprite == nullptr) return;
         SDL_Surface* surface = SDL_ConvertSurfaceFormat(sprite->surface, SDL_GetWindowPixelFormat(window), 0);
         SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-        SDL_Rect dst;
-        dst.x = x;
-        dst.y = y;
-        dst.w = sprite->width * scale;
-        dst.h = sprite->height * scale;
+        SDL_Rect dst{ x, y, sprite->width * scale, sprite->height * scale };
         SDL_RenderCopy(renderer, texture, NULL, &dst);
         SDL_FreeSurface(surface);
         SDL_DestroyTexture(texture);
+    }
+
+    void Engine::FillRect(int32_t x, int32_t y, int32_t w, int32_t h, SDL_Color p)
+    {
+        SDL_Rect rect{ x,y,w,h };
+        SDL_SetRenderDrawColor(renderer, p.r, p.g, p.b, p.a);
+        SDL_RenderFillRect(renderer, &rect);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
+    }
+
+    void Engine::DrawRect(int32_t x, int32_t y, int32_t w, int32_t h, SDL_Color p)
+    {
+        SDL_Rect rect{ x,y,w,h };
+        SDL_SetRenderDrawColor(renderer, p.r, p.g, p.b, p.a);
+        SDL_RenderDrawRect(renderer, &rect);
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
     }
 
     void Engine::Clear(SDL_Color color)
