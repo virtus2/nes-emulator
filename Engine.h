@@ -4,11 +4,16 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 #include <SDL_image.h>
+#include <SDL_audio.h>
+#include <SDL_mixer.h>
 #include <cstdio>
 #include <sstream>
 #include <chrono>
 #include <string>
 #include <vector>
+#include <algorithm>
+#include <functional>
+#include <list>
 /*
 *  Constants
 */
@@ -52,6 +57,21 @@ namespace vts
 
         public:
         bool SetPixel(int32_t x, int32_t y, SDL_Color p);
+    };
+
+    class Sound
+    {
+        public:
+        static bool InitializeAudio(unsigned int nSampleRate = 44100, unsigned int nChannels = 1, unsigned int nBlocks = 8, unsigned int nBlockSamples = 512);
+        static bool DestroyAudio();
+        static void SetUserSynthFunction(std::function<float(int, float, float)> func);
+        static float GetMixerOutput(int nChannel, float fGlobalTime, float fTimeStep);
+
+        private:
+        SDL_AudioSpec spec;
+        static std::function<float(int, float, float)> funcUserSynth;
+        static std::function<float(int, float, float)> funcUserFilter;
+
     };
 
     class Engine
@@ -177,7 +197,33 @@ namespace vts{
         else
             return false;
     }
+    // O------------------------------------------------------------------------------O
+    // | vts::Sound IMPLEMENTATION                                                   |
+    // O------------------------------------------------------------------------------O
 
+    bool Sound::InitializeAudio(unsigned int nSampleRate, unsigned int nChannels, unsigned int nBlocks, unsigned int nBlockSamples)
+    {
+
+        return true;
+    }
+
+    bool Sound::DestroyAudio()
+    {
+        return false;
+    }
+
+    void Sound::SetUserSynthFunction(std::function<float(int, float, float)> func)
+    {
+        funcUserSynth = func;
+    }
+
+    float Sound::GetMixerOutput(int nChannel, float fGlobalTime, float fTimeStep)
+    {
+        return 0.0f;
+    }
+
+    std::function<float(int, float, float)> Sound::funcUserSynth = nullptr;
+    std::function<float(int, float, float)> Sound::funcUserFilter = nullptr;
     // O------------------------------------------------------------------------------O
     // | vts::Engine IMPLEMENTATION                                                   |
     // O------------------------------------------------------------------------------O
