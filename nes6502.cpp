@@ -40,7 +40,7 @@ uint8_t nes6502::cpuRead(uint16_t a)
 {
 	// 정상 작동 시 "read only"는 false로 설정됨. 이상할 수 있지만
     // 버스상의 일부 장치들은 버스로부터 데이터를 읽을 때 상태를 변경할 수 있으며, 이는 정상적인 상황에서 의도된 것
-    // 하지만 disassembler는 버스의 장치 상태를 변경하지 않고 주소의 데이터를 읽어야함
+    // 하지만 disassembley는 버스의 장치 상태를 변경하지 않고 주소의 데이터를 읽어야함
     return bus->cpuRead(a, false);
 }
 // 버스의 특정 주소에 byte를 씀
