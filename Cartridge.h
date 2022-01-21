@@ -26,6 +26,15 @@ class Cartridge
 
 	public:
 	bool ImageValid();
+
+	enum MIRROR
+	{
+		// Name Table mirroring modes
+		HORIZONTAL,
+		VERTICAL,
+		ONESCREEN_LO,
+		ONESCREEN_HI,
+	}mirror = HORIZONTAL;
 	// Communications with Main Bus
 	bool cpuRead(uint16_t addr,  uint8_t & data);
 	bool cpuWrite(uint16_t addr, uint8_t  data);

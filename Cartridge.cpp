@@ -3,6 +3,7 @@
 Cartridge::Cartridge(const std::string& sFileName)
 {
     // iNES Format header
+    // https://wiki.nesdev.org/w/index.php/INES#iNES_file_format
     struct sHeader
     {
         char name[4];
@@ -29,6 +30,8 @@ Cartridge::Cartridge(const std::string& sFileName)
             ifs.seekg(512, std::ios_base::cur);
         // Mapper ID를 결정함
         nMapperID = ((header.mapper2 >> 4) << 4) | (header.mapper1 >> 4);
+        // 카트리지의 미러링 방식을 결정함(PPU의 Name table)
+        mirror = (header.mapper1 & 0x01) ? VERTICAL : HORIZONTAL;
         // 파일 포맷을 읽음
         uint8_t nFileType = 1;
 
