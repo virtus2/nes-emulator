@@ -7,9 +7,24 @@
 에뮬레이터는 하드웨어의 구조를 파악한 뒤에 CPU의 처리 과정과 메모리 전송 등을 전부 소프트웨어적으로 구현하고 컨트롤러의 입력이나 그래픽/사운드 처리는 DirectX 등을 사용하여 구현하는 방식이 주를 이룹니다. 이렇게 만들어진 가상의 기기 위에 실제 게임기의 소프트웨어를 올려서 구동시키는 것이 게임 에뮬레이터가 하는 일입니다.  
 이 프로젝트는 NES의 6502 CPU, 2C02 PPU, 카트리지 등을 소프트웨어적으로 구현하고 SDL로 화면을 렌더링합니다.
   
+<h3>실행 화면</h3>
+  
 <h3>참고</h3>  
 데이터시트 - http://archive.6502.org/datasheets/rockwell_r65c00_microprocessors.pdf<br>  
 Nesdev Wiki - https://wiki.nesdev.org/w/index.php?title=Nesdev_Wiki<br>  
   
 <h3>Special Thanks to</h3>  
-OneLoneCoder - https://www.youtube.com/c/javidx9/
+OneLoneCoder - https://www.youtube.com/c/javidx9/  
+
+<h3>License (OLC-3)</h3>
+Copyright 2018, 2019, 2020, 2021 OneLoneCoder.com
+  
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+  
+Redistributions or derivations of source code must retain the above copyright notice, this list of conditions and the following disclaimer.  
+  
+Redistributions or derivative works in binary form must reproduce the above copyright notice. This list of conditions and the following disclaimer must be reproduced in the documentation and/or other materials provided with the distribution.
+  
+Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+  
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
