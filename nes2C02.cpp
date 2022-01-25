@@ -95,7 +95,7 @@ vts::Sprite& nes2C02::GetPatternTable(uint8_t i, uint8_t palette)
 	// 따라서 게임이 팔레트를 구축하지 않았거나 관련 CHR ROM 뱅크에 매핑하지 않은 경우 스프라이트가 비어 보일 수 있다. 
 	// 이 접근법은 패턴 테이블의 실시간 추출을 허용하며, NES와 플레이어가 이를 볼 수 있다.
 
-	// 타일은 8x8 픽셀로 구성됩니다. NES에서 픽셀은 2비트이며 이것은 곧 특정 팔레트의 4가지 다른 색상을 나타내는 인덱스이다. (값이 0,1,2,3)
+	// 타일은 8x8 픽셀로 구성된다. NES에서 픽셀은 2비트이며 이것은 곧 특정 팔레트의 4가지 다른 색상을 나타내는 인덱스이다. (값이 0,1,2,3)
 	// 팔레트는 총 8개이며, 각 팔레트의 색상 "0"은 투명색으로 간주되는데, 전역적으로 사용되는 배경색의 메모리 주소를 "mirror"하기 때문이다. 
 	// 이 메커니즘은 nes2C02.h의 주석, ppuRead() 및 ppuWrite()에 자세히 나온다.
 
@@ -156,7 +156,7 @@ vts::Sprite& nes2C02::GetPatternTable(uint8_t i, uint8_t palette)
 					// 이를 화면의 색상과 스프라이트의 (x,y) 위치로 변환할 수 있다.
 					sprPatternTable[i].SetPixel
 					(
-						// 행의 LSB를 먼저 사용하기 때문에 행을 오른쪽에서 왼쪽으로 효과적으로 읽고 있으므로 
+						// 행의 LSB를 먼저 사용하기 때문에 행을 오른쪽에서 왼쪽으로 읽고 있으므로 
 						// 스크린은 왼쪽에서 오른쪽으로 그리기 때문에 행을 "뒤로" 그려야 한다.
 						nTileX * 8 + (7 - col), 
 						nTileY * 8 + row,
@@ -187,9 +187,9 @@ uint8_t nes2C02::cpuRead(uint16_t addr, bool rdonly)
     uint8_t data = 0x00;
 	if (rdonly)
 	{
-		// PPU 레지스터를 읽으면 내용에 영향을 미칠 수 있으므로 
-		// 읽기 전용 옵션은 상태를 변경하지 않고 PPU 상태를 검사하는 데 사용된다.
-		// 이것은 디버그 모드에서만 실제로 사용됨.
+		// read된 값에 따라 PPU 레지스터에 영향을 미칠 수 있으므로 
+		// 읽기 전용 옵션(rdonly)은 상태를 변경하지 않고 레지스터를 검사하는 데 사용된다.
+		// 디버그 모드에서의 사용을 위한 것 이다.
 		switch (addr)
 		{
 		case 0x0000: // Control
@@ -215,7 +215,7 @@ uint8_t nes2C02::cpuRead(uint16_t addr, bool rdonly)
 	}
 	else
 	{
-		// 다양한 방법으로 읽혀지는 라이브 PPU 레지스터들
+		// 읽을 수 있는 PPU 레지스터들의 값을 반환한다.
 		// 일부 레지스터는 읽을 수 없으므로 0x00만 반환한다.
 		switch (addr)
 		{
@@ -227,9 +227,9 @@ uint8_t nes2C02::cpuRead(uint16_t addr, bool rdonly)
 
 			// Status
 		case 0x0002:
-			// 상태 레지스터에서 판독하면 회로의 여러 부분이 재설정되는 효과가 있다.
+			// 상태(status) 레지스터를 읽으면 회로의 여러 부분이 재설정되는 효과가 있다.
 			// 상위 3개 비트만 상태 정보를 포함하지만 최근의 PPU 버스 트랜잭션을 나타내는 하위 5비트에서 일부 "노이즈"가 발생할 수 있다.
-			// 몇몇 게임에서는 이 노이즈를 유효한 데이터로 사용할 수도 있다. (사용하면 안되는 것이라도)
+			// 몇몇 게임에서는 이 노이즈를 유효한 데이터로 사용할 수도 있다. (사용하면 안되는 것일지라도!)
 			data = (status.reg & 0xE0) | (ppu_data_buffer & 0x1F);
 
 			// Clear the vertical blanking flag
@@ -295,15 +295,16 @@ void nes2C02::cpuWrite(uint16_t addr, uint8_t data)
 	case 0x0005: // Scroll
 		if (address_latch == 0)
 		{
-			// 스크롤(Scroll) 레지스터에 처음 쓰기는 픽셀 공간에 X 오프셋을 포함하고 있으며, 
+			// 스크롤(Scroll) 레지스터에 첫 쓰기 작업은 픽셀 공간(pixel space)의 X 오프셋을 포함하고 있으며, 
 			// 이 오프셋은 거친(coarse) x 값과 미세한(fine) x 값으로 나뉜다.
+			// coarse는 픽셀 간, fine은 픽셀 내부의 1개의 점
 			fine_x = data & 0x07; // pixel offset
 			tram_addr.coarse_x = data >> 3;
 			address_latch = 1;
 		}
 		else
 		{
-			// 스크롤(Scroll) 레지스터에 처음 쓰기는 픽셀 공간에 Y 오프셋을 포함하고 있으며, 
+			// 스크롤(Scroll) 레지스터에 첫 쓰기 작업은 픽셀 공간(pixel space)의 Y 오프셋을 포함하고 있으며, 
 			// 이 오프셋은 거친(coarse) y 값과 미세한(fine) y 값으로 나뉜다.
 			tram_addr.fine_y = data & 0x07; // pixel offset
 			tram_addr.coarse_y = data >> 3;
