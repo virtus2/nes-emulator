@@ -13,8 +13,8 @@
 ![2](Screenshots/2.png)  
 
 ### 필수 조건
-SDL - https://www.libsdl.org/  
-실행할 게임의 ROM 파일  
+* SDL - https://www.libsdl.org/  
+* 실행할 게임의 ROM 파일  
 
  ### 문제점  
 * 오디오 출력이 되지 않으며 에뮬레이터의 속도가 기존의 기기보다 빠를 수 있습니다.  
