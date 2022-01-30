@@ -8,8 +8,8 @@
 이 프로젝트는 NES의 6502 CPU, 2C02 PPU, 카트리지 등을 소프트웨어적으로 구현하고 SDL로 화면을 렌더링합니다.
   
 <h3>실행 화면</h3>
-![1](/Screenshots/1.png)  
-![2](/Screenshots/2.png)  
+![1](Screenshots/1.png)  
+![2](Screenshots/2.png)  
 
 <h3>필수 조건</h3>
 SDL - https://www.libsdl.org/  
