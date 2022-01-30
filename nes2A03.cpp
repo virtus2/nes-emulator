@@ -279,5 +279,15 @@ void nes2A03::reset()
 
 double nes2A03::GetOutputSample()
 {
-    return 0.0;
+    if (bUseRawMode)
+    {
+        return (pulse1_sample - 0.5) * 0.5
+            + (pulse2_sample - 0.5) * 0.5;
+    }
+    else
+    {
+        return ((1.0 * pulse1_output) - 0.8) * 0.1 +
+            ((1.0 * pulse2_output) - 0.8) * 0.1 +
+            ((2.0 * (noise_output - 0.5))) * 0.1;
+    }
 }

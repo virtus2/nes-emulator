@@ -68,10 +68,9 @@ namespace vts
         static float GetMixerOutput(int nChannel, float fGlobalTime, float fTimeStep);
 
         private:
-        SDL_AudioSpec spec;
+        SDL_AudioSpec wanted, spec;
         static std::function<float(int, float, float)> funcUserSynth;
         static std::function<float(int, float, float)> funcUserFilter;
-
     };
 
     class Engine
@@ -89,6 +88,7 @@ namespace vts
         public:
         virtual bool OnUserCreate();
         virtual bool OnUserUpdate(float fElapsedTime);
+        virtual bool OnUserDestroy();
 
         public:
         // Drawing
@@ -203,7 +203,21 @@ namespace vts{
 
     bool Sound::InitializeAudio(unsigned int nSampleRate, unsigned int nChannels, unsigned int nBlocks, unsigned int nBlockSamples)
     {
+        /*
+        isRunning = false;
+        wanted.freq = nSampleRate;
+        wanted.format = AUDIO_S16SYS;
+        wanted.channels = nChannels;
+        wanted.samples = nBlockSamples;
 
+        if (SDL_OpenAudio(&wanted, &spec) < 0)
+        {
+            printf("SDL_OpenAudio: %s\n", SDL_GetError());
+            return false;
+        }
+        SDL_PauseAudio(0);
+        isRunning = true;
+        */
         return true;
     }
 
@@ -219,7 +233,10 @@ namespace vts{
 
     float Sound::GetMixerOutput(int nChannel, float fGlobalTime, float fTimeStep)
     {
-        return 0.0f;
+        float fMixerSample = 0.0f;
+        if (funcUserSynth != nullptr)
+            fMixerSample += funcUserSynth(nChannel, fGlobalTime, fTimeStep);
+        return fMixerSample;
     }
 
     std::function<float(int, float, float)> Sound::funcUserSynth = nullptr;
@@ -287,6 +304,10 @@ namespace vts{
     {
         return false;
     }
+    bool Engine::OnUserDestroy()
+    {
+        return true;
+    }
     void Engine::PrepareEngine()
     {
         m_tp1 = std::chrono::system_clock::now();
@@ -301,7 +322,10 @@ namespace vts{
         {
             while (isRunning) { Update(); }
 
-            //if(OnUserDestroy)
+            if (!OnUserDestroy())
+            {
+                isRunning = true;
+            }
         }
     }
 

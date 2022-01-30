@@ -126,7 +126,7 @@ class Demo : public vts::Engine
 	bool OnUserCreate()
 	{
 		// Load the cartridge
-		cart = std::make_shared<Cartridge>("ROMs/donkey.nes");
+		cart = std::make_shared<Cartridge>("ROMs/smb.nes");
 		if (!cart->ImageValid())
 		{
 			printf("Cartridge Not Valid!\n");
@@ -154,12 +154,34 @@ class Demo : public vts::Engine
 		nes.SetSampleFrequency(44100);
 		vts::Sound::InitializeAudio(44100, 1, 8, 512);
 		vts::Sound::SetUserSynthFunction(SoundOut);
+
+
+		SDL_AudioSpec wavSpec;
+		SDL_memset(&wavSpec, 0, sizeof(wavSpec)); /* or SDL_zero(want) */
+
+		wavSpec.userdata = nullptr;
+		wavSpec.format = AUDIO_S16;
+		wavSpec.channels = 2;
+		wavSpec.samples = 2048;
+		
+		if (SDL_OpenAudio(&wavSpec, NULL) < 0)
+		{
+			fprintf(stderr, "Could not open audio: %s\n", SDL_GetError());
+		}
+		SDL_PauseAudio(0);
+		return true;
+	}
+
+	bool OnUserDestroy()
+	{
+		vts::Sound::DestroyAudio();
 		return true;
 	}
 
 	bool OnUserUpdate(float fElapsedTime)
 	{
-		EmulatorUpdateWithAudio(fElapsedTime);
+		EmulatorUpdateWithoutAudio(fElapsedTime);
+		// EmulatorUpdateWithAudio(fElapsedTime);
 		return true;
 	}
 
