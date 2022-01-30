@@ -8,7 +8,18 @@
 이 프로젝트는 NES의 6502 CPU, 2C02 PPU, 카트리지 등을 소프트웨어적으로 구현하고 SDL로 화면을 렌더링합니다.
   
 <h3>실행 화면</h3>
-  
+![1](/Screenshots/1.png?raw=true "1")  
+![2](/Screenshots/2.png?raw=true "2")  
+
+<h3>필수 조건</h3>
+SDL - https://www.libsdl.org/  
+실행할 게임의 ROM 파일  
+
+<h3>문제점</h3>  
+- 오디오 출력이 되지 않으며 에뮬레이터의 속도가 기존의 기기보다 빠를 수 있습니다.  
+- 현재 게임 카트리지에 사용되는 메모리 관리 칩인 매퍼(Mapper 혹은 MMC, Memory Management Controller)가 모두 구현되어 있지 않습니다.  
+MMC 1만 구현되어 있는 상태입니다. 따라서 해당 칩을 사용하는 카트리지 게임만 플레이 가능합니다.
+
 <h3>참고</h3>  
 데이터시트 - http://archive.6502.org/datasheets/rockwell_r65c00_microprocessors.pdf<br>  
 Nesdev Wiki - https://wiki.nesdev.org/w/index.php?title=Nesdev_Wiki<br>  
